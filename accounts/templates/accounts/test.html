@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification test</title>
+</head>
+<body>
+    <h1>Here We'll test the notification sending</h1>
+    
+    <script type='text/javascript'>
+        const websocket = new WebSocket(`ws://${window.location.host}/ws/notifications/`)
+
+        websocket.onmessage = function(e) {
+            let data = JSON.parse(e.data)
+            console.log(data)
+        }
+
+    </script>
+</body>
+</html>
