@@ -1,8 +1,6 @@
 from django.db import models
 
 # Create your models here.
-#Dans une autre app
-
 class Expense(models.Model):
     farm = models.ForeignKey('farms.Farm', related_name='expenses', on_delete=models.CASCADE)
     description = models.TextField()

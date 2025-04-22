@@ -10,6 +10,9 @@ class WeatherData(models.Model):
     precipitation = models.FloatField()
     date = models.DateField(auto_now=False, auto_now_add=False)
     
+# class Alert(models.Model):
+#     message = 
+    
 class DiseaseAlert(models.Model):
     SEVERITY_CHOICES = [
         ('low', 'Low'),

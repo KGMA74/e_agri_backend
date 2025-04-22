@@ -1,23 +1,28 @@
 from .serializers import (
-    ProfileSerializer, EmployeeSerializer, FarmerSerializer
+    EmployeeCreateSerializer,
+    CustomUserSerializer, ProfileSerializer, EmployeeSerializer, FarmerSerializer
 )
 from .models import Profile, Farmer, Employee
 from django.conf import settings 
 from djoser.views import UserViewSet
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 from rest_framework.response import Response
+from rest_framework.request import Request
+from rest_framework.exceptions import ValidationError
 from rest_framework import generics, status, viewsets
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.decorators import api_view, action, permission_classes
 from djoser.social.views import ProviderAuthView
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
+from .permissions import IsAdminOrFarmer
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
     TokenVerifyView
 )
-
+from .utils import set_auth_cookie
 
 def test(request):
     from django.shortcuts import render
@@ -30,28 +35,10 @@ class CustomProviderAuthView(ProviderAuthView):
         if response.status_code == 201:
             access_token = response.data.get('access')
             refresh_token = response.data.get('refresh')
-
-            response.set_cookie(
-                'access',
-                access_token,
-                max_age=settings.AUTH_COOKIE_MAX_AGE,
-                path=settings.AUTH_COOKIE_PATH,
-                secure=settings.AUTH_COOKIE_SECURE,
-                httponly=settings.AUTH_COOKIE_HTTP_ONLY,
-                samesite=settings.AUTH_COOKIE_SAMESITE,
-                domain=settings.AUTH_COOKIE_DOMAIN
-            )
-            response.set_cookie(
-                'refresh',
-                refresh_token,
-                max_age=settings.AUTH_COOKIE_MAX_AGE,
-                path=settings.AUTH_COOKIE_PATH,
-                secure=settings.AUTH_COOKIE_SECURE,
-                httponly=settings.AUTH_COOKIE_HTTP_ONLY,
-                samesite=settings.AUTH_COOKIE_SAMESITE,
-                domain=settings.AUTH_COOKIE_DOMAIN
-            )
-
+            if access_token:
+                set_auth_cookie(response, 'access', access_token, settings.AUTH_COOKIE_ACCESS_MAX_AGE)
+            if refresh_token:
+                set_auth_cookie(response, 'refresh', refresh_token, settings.AUTH_COOKIE_REFRESH_MAX_AGE)
         return response
     
 #customisation de la class TokenObtainPairView pour que les tokens passes par les cookies et non les headers donc plus securise
@@ -61,32 +48,13 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         if response.status_code == 200:
             access_token = response.data.get('access')
             refresh_token = response.data.get('refresh')
-            
-        
-        #un cookie pour le access token
-        response.set_cookie(
-            'access',
-            access_token,
-            max_age=settings.AUTH_COOKIE_ACCESS_MAX_AGE,
-            secure=settings.AUTH_COOKIE_SECURE,
-            httponly=settings.AUTH_COOKIE_HTTP_ONLY,
-            path=settings.AUTH_COOKIE_PATH,
-            samesite=settings.AUTH_COOKIE_SAMESITE,
-            domain=settings.AUTH_COOKIE_DOMAIN
-        )
-        
-        #un cookie pour le refresh token
-        response.set_cookie(
-            'refresh',
-            refresh_token,
-            max_age=settings.AUTH_COOKIE_REFRESH_MAX_AGE,
-            secure=settings.AUTH_COOKIE_SECURE,
-            httponly=settings.AUTH_COOKIE_HTTP_ONLY,
-            path=settings.AUTH_COOKIE_PATH,
-            samesite=settings.AUTH_COOKIE_SAMESITE,
-            domain=settings.AUTH_COOKIE_DOMAIN
-        )
-            
+
+            if access_token:
+                set_auth_cookie(response, 'access', access_token, settings.AUTH_COOKIE_ACCESS_MAX_AGE)
+                
+            if refresh_token:
+                set_auth_cookie(response, 'refresh', refresh_token, settings.AUTH_COOKIE_REFRESH_MAX_AGE)
+                
         return response
 
 class CustomTokenRefreshView(TokenRefreshView):
@@ -104,17 +72,9 @@ class CustomTokenRefreshView(TokenRefreshView):
             print("Access token:", access_token)
             
             #on met a jour le access token
-            response.set_cookie(
-                'access',
-                access_token,
-                max_age=settings.AUTH_COOKIE_ACCESS_MAX_AGE,
-                secure=settings.AUTH_COOKIE_SECURE,
-                httponly=settings.AUTH_COOKIE_HTTP_ONLY,
-                path=settings.AUTH_COOKIE_PATH,
-                samesite=settings.AUTH_COOKIE_SAMESITE,
-                domain=settings.AUTH_COOKIE_DOMAIN
-            )
-            
+            if access_token:
+                set_auth_cookie(response, 'access', access_token, settings.AUTH_COOKIE_ACCESS_MAX_AGE)
+     
         return response
     
 
@@ -123,59 +83,9 @@ class CustomTokenVerifyView(TokenVerifyView):
         access_token = request.COOKIES.get('access')
         
         if access_token:
-            print(access_token, '-----')
-            mutable_data = request.data.copy()
-            mutable_data['token'] = access_token
-            request._full_data = mutable_data
+            request = Request(request._request, data={'token': access_token})
             
         return super().post(request, *args, **kwargs)
-    
-
-class CustomUserViewSet(UserViewSet):
-
-    def perform_create(self, serializer, *args, **kwargs):
-        
-        
-        # serializer = self.get_serializer(data=request.data)
-        super().perform_create(serializer)
-        user = serializer.instance 
-        # if serializer.is_valid():
-        #     user = serializer.save()
-            
-
-        # Création du profil en fonction du rôle
-        role = user.role
-        print("mmmmmmmmmmmmmmmmmrole=", role)
-        if role == "farmer":
-            Farmer.objects.create(user=user)
-        elif role == "employee":
-            Employee.objects.create(user=user)
-            
-        # if role == "student":
-        #     # level_id = request.data.get("level")
-        #     # level = Level.objects.get(id=level_id) if level_id else None
-        #     Student.objects.create(user=user)
-        # elif role == "teacher":
-        #     print("999999999999999999999999999999999")
-        #     specialty = self.request.data.get("specialty", "")
-        #     degree = self.request.data.get("degree", "")
-        #     Teacher.objects.create(user=user, specialty=specialty, degree=degree)
-        # elif role == "parent":
-        #     Parent.objects.create(user=user)
-
-        # Réponse de succès
-        return Response({
-            "message": "User registered successfully",
-            "user": {
-                "email": user.email,
-                "firstname": user.firstname,
-                "role": role
-            }
-        }, status=status.HTTP_201_CREATED)
-
-    # En cas d'erreurs de validation dans le sérialiseur
-    # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
     
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -183,66 +93,82 @@ def LogoutView(request):
     if request.method == 'POST':
         # Supprimer les tokens en mettant leur valeur des cookies à ''
         response = Response(status=status.HTTP_204_NO_CONTENT)
-        
-        response.set_cookie(
-            'refresh',
-            value='',
-            max_age=0,
-            secure=settings.AUTH_COOKIE_SECURE,
-            httponly=settings.AUTH_COOKIE_HTTP_ONLY,
-            path=settings.AUTH_COOKIE_PATH,
-            samesite=settings.AUTH_COOKIE_SAMESITE,
-            domain=settings.AUTH_COOKIE_DOMAIN 
-        )
-        
-        response.set_cookie(
-            'access',
-            value='',
-            max_age=0,
-            secure=settings.AUTH_COOKIE_SECURE,
-            httponly=settings.AUTH_COOKIE_HTTP_ONLY,
-            path=settings.AUTH_COOKIE_PATH,
-            samesite=settings.AUTH_COOKIE_SAMESITE,
-            domain=settings.AUTH_COOKIE_DOMAIN
-        )
-
-        # Ajouter les tokens à la liste de blackliste
-
-        refresh_token = request.data.get('refresh', None)
-        access_token = request.data.get('access', None)
-        
-        try:
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-        except Exception as e:
-            pass
-        
-        try:
-            token = AccessToken(access_token)
-            
-        except Exception as e:
-            pass
+                   
+        # Suppressions des cookies
+        set_auth_cookie(response, 'access', '', max_age=0)
+        set_auth_cookie(response, 'refresh', '', max_age=e)
         
         return response
     
     return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
+class CustomUserViewSet(UserViewSet): 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        try:
+            with transaction.atomic():  # Annule tout si une erreur survient
+                self.perform_create(serializer)
+                user = serializer.instance
 
+                if user.role == "farmer":
+                    Farmer.objects.create(user=user)
+                elif user.role == "employee":
+                    Employee.objects.create(user=user)
 
-class ProfileViewSet(viewsets.ModelViewSet):
-    queryset = Profile.objects.all()
+        except Exception as e:
+            return Response(
+                {"detail": f"User registration failed: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+class ProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = ProfileSerializer
-    
-    
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user.profile
+
 class FarmerViewSet(viewsets.ModelViewSet):
     queryset = Farmer.objects.all()
     serializer_class = FarmerSerializer
     
-    @action(detail=False, methods=['post'])
-    def add_employee(self, request, pk=None):
-        if request.user.role == "Farmer":
-            pass
+   
+class EmployeeViewSet(viewsets.ModelViewSet):
+    queryset = Employee.objects.all()
+    permission_classes = [IsAuthenticated]
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return EmployeeCreateSerializer
+        return EmployeeSerializer
 
+
+    def perform_create(self, serializer):
+        user = self.request.user
+
+        if hasattr(user, 'farmer'):
+            farmer = user.farmer
+            
+        elif user.role == 'admin':
+            farmer_id = self.request.data.get('farmer_id')
+            if not farmer_id:
+                raise ValidationError({'farmer_id': 'This field is required for admin users.'})
+            try:
+                farmer = Farmer.objects.get(pk=farmer_id)
+            except Farmer.DoesNotExist:
+                raise ValidationError({'farmer_id': 'Invalid farmer ID.'})
+        else:
+            raise ValidationError("Only farmers or admins can create employees.")
+
+        serializer.save(farmer=farmer)
+    
+
+ 
 # class TeacherViewSet(viewsets.ModelViewSet):
 #     queryset = Teacher.objects.all()
 #     serializer_class = TeacherSerializer

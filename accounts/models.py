@@ -42,7 +42,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', primary_key=True)
-    # avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     bio = models.TextField(null=True, blank=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     address = models.CharField(max_length=255, null=True, blank=True)
@@ -57,5 +57,5 @@ class Farmer(models.Model):
 class Employee(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='employee', primary_key=True)
     tasks = models.ManyToManyField('tasks.Task', related_name='employees')
-    salary = models.FloatField()
+    salary = models.FloatField(default=0.)
     post = models.CharField(max_length=50)

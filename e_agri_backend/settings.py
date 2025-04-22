@@ -198,13 +198,13 @@ CORS_ALLOW_ALL_ORIGINS = True
 #CORS_ALLOWED_ORIGINS = getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:3000').split(',')
 
 AUTH_COOKIE = 'access'
-AUTH_COOKIE_ACCESS_MAX_AGE = timedelta(days=1).seconds
-AUTH_COOKIE_REFRESH_MAX_AGE = timedelta(weeks=1).seconds
-AUTH_COOKIE_SECURE = getenv('AUTH_COOKIE_SECURE', 'True') == 'True'
+AUTH_COOKIE_ACCESS_MAX_AGE = int(timedelta(days=1).total_seconds())
+AUTH_COOKIE_REFRESH_MAX_AGE = int(timedelta(weeks=1).total_seconds())
+AUTH_COOKIE_SECURE = getenv('AUTH_COOKIE_SECURE', f'{not DEBUG}') == 'True'
 AUTH_COOKIE_HTTP_ONLY = True
 AUTH_COOKIE_PATH = '/'
-AUTH_COOKIE_SAMESITE = 'lax'
-AUTH_COOKIE_DOMAIN = getenv('DOMAIN', '127.0.0.1')
+AUTH_COOKIE_SAMESITE = 'Lax'
+AUTH_COOKIE_DOMAIN = getenv('DOMAIN', 'localhost')
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
