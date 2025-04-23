@@ -4,45 +4,62 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync, sync_to_async
 from .models import Notification
 
+
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        self.group_name = 'notifications_44'
         self.user = self.scope['user']
         if self.user.is_authenticated:
-            self.room_group_name = f'notifications_{self.user.id}'
+            # self.room_group_name = f'notifications_{self.user.id}'
+            
             await self.channel_layer.group_add(
-                self.room_group_name,
+                self.group_name,
                 self.channel_name
             )
             await self.accept()
         else:
-            await self.close()
+            await self.channel_layer.group_add(
+                'notifications_44',
+                self.channel_name
+            )
+            await self.accept()
+            
+        await self.channel_layer.group_send(
+            'notifications_44',
+            {
+                'type': 'send_notification',
+                'message': 'connecte avec success'
+            }
+        )
+            # await self.close()
 
-    async def disconnect(self, close_code):
+    async def disconnect(self, code):
         await self.channel_layer.group_discard(
-            self.room_group_name,
+            self.group_name,
             self.channel_name
         )
 
-    async def receive(self, text_data):
-        text_data_json = json.loads(text_data)
+    # async def receive(self, text_data):
+    #     text_data_json = json.loads(text_data)
         
-        # Vérifie si l'action concerne la mise à jour d'une notification comme lue
-        if 'mark_as_read' in text_data_json:
-            notification_id = text_data_json['mark_as_read']
-            await self.mark_notification_as_read(notification_id)
+    #     # Vérifie si l'action concerne la mise à jour d'une notification comme lue
+    #     if 'mark_as_read' in text_data_json:
+    #         notification_id = text_data_json['mark_as_read']
+    #         await self.mark_notification_as_read(notification_id)
 
-        message = text_data_json.get('message')
+    #     message = text_data_json.get('message')
         
-        if message:
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    'type': 'notification_message',
-                    'message': message
-                }
-            )
+    #     if message:
+    #         await self.channel_layer.group_send(
+    #             # self.group_name,
+    #             'notifications_44',
+    #             {
+    #                 'type': 'send_notification',
+    #                 'message': message
+    #             }
+    #         )
 
-    async def notification_message(self, event):
+    async def send_notification(self, event):
         message = event['message']
         await self.send(text_data=json.dumps({
             'message': message
@@ -50,20 +67,14 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
     @staticmethod
     def create_notification(user, message, notification_type):
-        notification = Notification.objects.create(
-            user=user,
-            message=message,
-            notification_type=notification_type,
-        )
-        
-        # Envoi de la notification en temps réel via WebSocket
         channel_layer = get_channel_layer()
+
         async_to_sync(channel_layer.group_send)(
-            f'notifications_{user.id}',
+              'notifications_44',
             {
-                'type': 'notification_message',
+                'type': 'send_notification',
                 'message': message,
-                'notification_id': notification.id
+                # 'notification_id': notification.id
             }
         )
 

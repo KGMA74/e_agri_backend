@@ -1,12 +1,18 @@
 from rest_framework import permissions
 
-class IsAdminUserOrReadOnly(permissions.BasePermission):
+class IsAdminUserOrReadOnly(permissions.IsAdminUser):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
-        return request.user.is_authenticated and request.user.is_superuser
+        return super().has_permission(request, view)
     
     
-class IsAdminOrFarmer(permissions.BasePermission):
+class IsAdminOrFarmer(permissions.IsAdminUser):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and (request.user.is_superuser or request.user.role == 'farmer')
+        return super().has_permission(request, view) or request.user.role == 'farmer'
+    
+class IsAdminOrFarmerOrReadOnly(IsAdminOrFarmer):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return super().has_permission(request, view)

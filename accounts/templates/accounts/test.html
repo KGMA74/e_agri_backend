@@ -7,13 +7,16 @@
 </head>
 <body>
     <h1>Here We'll test the notification sending</h1>
-    
+    <p class="data"></p>
     <script type='text/javascript'>
         const websocket = new WebSocket(`ws://${window.location.host}/ws/notifications/`)
 
         websocket.onmessage = function(e) {
             let data = JSON.parse(e.data)
-            console.log(data)
+
+            document.querySelector('.data').innerHTML += (data.message + '<br/>');
+
+            console.log('<<<<<<<<<<<<<<<<<<<<<<<<', data)
         }
 
     </script>

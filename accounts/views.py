@@ -96,7 +96,7 @@ def LogoutView(request):
                    
         # Suppressions des cookies
         set_auth_cookie(response, 'access', '', max_age=0)
-        set_auth_cookie(response, 'refresh', '', max_age=e)
+        set_auth_cookie(response, 'refresh', '', max_age=0)
         
         return response
     
@@ -140,7 +140,11 @@ class FarmerViewSet(viewsets.ModelViewSet):
    
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
-    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [IsAdminOrFarmer]
+        return [IsAuthenticated]
     
     def get_serializer_class(self):
         if self.action == 'create':
