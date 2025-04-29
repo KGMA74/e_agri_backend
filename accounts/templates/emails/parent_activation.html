@@ -1,0 +1,35 @@
+{% load i18n %}
+
+{% block subject %}
+{% blocktrans %}Activation de votre compte parent sur {{ site_name }}{% endblocktrans %}
+{% endblock subject %}
+
+{% block text_body %}
+{% blocktrans %}Bonjour {{ user.first_name }} {{ user.last_name }} !{% endblocktrans %}
+
+{% blocktrans %}Merci de vous être inscrit(e) en tant que parent sur notre plateforme. Veuillez cliquer sur le lien ci-dessous pour activer votre compte.{% endblocktrans %}
+
+{% trans "Veuillez aller à la page suivante pour activer votre compte parent :" %}
+{{ protocol }}://{{ domain }}/{{ url|safe }}
+
+{% trans "Si vous n'avez pas demandé cette inscription, ignorez ce message." %}
+
+{% trans "Merci d'utiliser notre plateforme !" %}
+
+{% blocktrans %}L'équipe {{ site_name }}{% endblocktrans %}
+{% endblock text_body %}
+
+{% block html_body %}
+<p>{% blocktrans %}Bonjour {{ user.first_name }} {{ user.last_name }} !{% endblocktrans %}</p>
+
+<p>{% blocktrans %}Merci de vous être inscrit(e) en tant que parent sur notre plateforme. Veuillez cliquer sur le lien ci-dessous pour activer votre compte.{% endblocktrans %}</p>
+
+<p>{% trans "Veuillez aller à la page suivante pour activer votre compte parent :" %}</p>
+<p><a href="{{ protocol }}://{{ domain }}/{{ url|safe }}">{{ protocol }}://{{ domain }}/{{ url|safe }}</a></p>
+
+<p>{% trans "Si vous n'avez pas demandé cette inscription, ignorez ce message." %}</p>
+
+<p>{% trans "Merci d'utiliser notre plateforme !" %}</p>
+
+<p>{% blocktrans %}L'équipe {{ site_name }}{% endblocktrans %}</p>
+{% endblock html_body %}

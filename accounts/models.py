@@ -56,6 +56,7 @@ class Farmer(models.Model):
 
 class Employee(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='employee', primary_key=True)
+    farmer = models.ForeignKey(Farmer, on_delete=models.CASCADE, related_name='employees')
     tasks = models.ManyToManyField('tasks.Task', related_name='employees')
     salary = models.FloatField(default=0.)
     post = models.CharField(max_length=50)

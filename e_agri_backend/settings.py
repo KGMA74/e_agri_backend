@@ -222,9 +222,9 @@ DJOSER = {
     'USER_CREATE_PASSWORD_RETYPE': True,  
     'PASSWORD_RESET_CONFIRM_RETYPE': True,
     'TOKEN_MODEL': None,  
-    # "EMAIL": {
-    #     "activation": "accounts.email.CustomActivationEmail",
-    # },
+    "EMAIL": {
+        "activation": "accounts.email.CustomActivationEmail",
+    },
     'PERMISSIONS': {
         'user':  ["rest_framework.permissions.AllowAny"],
         'user_list':  ["rest_framework.permissions.AllowAny"]

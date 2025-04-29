@@ -4,4 +4,5 @@ from rest_framework.serializers import ModelSerializer
 class TaskSerializer(ModelSerializer):
     class Meta:
         model = Task
-        fields = ['farm', 'description', 'dueDate', 'status', 'employees']
+
+        
