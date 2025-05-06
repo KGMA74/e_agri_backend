@@ -102,7 +102,19 @@ def LogoutView(request):
     
     return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-class CustomUserViewSet(UserViewSet): 
+class CustomUserViewSet(UserViewSet):
+    def handle_user_role(self, user):
+        if user.role == "farmer":
+            Farmer.objects.create(user=user)
+        elif user.role == "employee":
+            raise ValidationError("Employee role cannot be created through this endpoint. manage use the endpoint POST /api/employees/")
+            # la création d'un employé est gérée dans la vue EmployeeViewSet
+            # Operation autorisee uniquement pour les admins ou les agriculteurs
+        elif user.role == "admin":
+            pass
+        else:
+            raise ValidationError("Invalid role specified.")
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -112,11 +124,11 @@ class CustomUserViewSet(UserViewSet):
                 self.perform_create(serializer)
                 user = serializer.instance
 
-                if user.role == "farmer":
-                    Farmer.objects.create(user=user)
-                elif user.role == "employee":
-                    Employee.objects.create(user=user)
+                if user.role == "admin" and request.user and not request.user.is_superuser:
+                    raise ValidationError("Admin role cannot be created directly.")
 
+                self.handle_user_role(user)
+                
         except Exception as e:
             return Response(
                 {"detail": f"User registration failed: {str(e)}"},
@@ -160,6 +172,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             
         elif user.role == 'admin':
             farmer_id = self.request.data.get('farmer_id')
+
             if not farmer_id:
                 raise ValidationError({'farmer_id': 'This field is required for admin users.'})
             try:

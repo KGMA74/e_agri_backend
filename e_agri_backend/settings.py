@@ -223,7 +223,7 @@ DJOSER = {
     'PASSWORD_RESET_CONFIRM_RETYPE': True,
     'TOKEN_MODEL': None,  
     "EMAIL": {
-        "activation": "accounts.email.CustomActivationEmail",
+        "activation": "accounts.emails.CustomActivationEmail",
     },
     'PERMISSIONS': {
         'user':  ["rest_framework.permissions.AllowAny"],
