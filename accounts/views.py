@@ -143,8 +143,8 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action == 'create':
-            return [IsAdminOrFarmer]
-        return [IsAuthenticated]
+            return [IsAuthenticated(), IsAdminOrFarmer()]
+        return [IsAuthenticated()]
     
     def get_serializer_class(self):
         if self.action == 'create':
