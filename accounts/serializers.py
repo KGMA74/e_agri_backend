@@ -12,12 +12,12 @@ class CustomUserSerializer(UserSerializer):
         data = super().to_representation(instance)
         
         request = self.context.get('request')
-        if request and request.method in ['GET']:
+        if request and request.method in ['GET', 'POST']:
             data['profile'] = ProfileSerializer(instance.profile, many=False).data
             
             if getattr(instance, 'farmer', None):
                 data['farmer'] = FarmerSerializer(instance.farmer, many=False).data
-            if getattr(instance, 'emplyee', None):
+            if getattr(instance, 'employee', None):
                 data['employee'] = EmployeeSerializer(instance.employee, many=False).data
                 
         return data

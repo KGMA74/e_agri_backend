@@ -2,7 +2,7 @@ from .serializers import (
     EmployeeCreateSerializer,
     CustomUserSerializer, ProfileSerializer, EmployeeSerializer, FarmerSerializer
 )
-from .models import Profile, Farmer, Employee
+from .models import User, Profile, Farmer, Employee
 from django.conf import settings 
 from djoser.views import UserViewSet
 from django.shortcuts import get_object_or_404
@@ -45,6 +45,7 @@ class CustomProviderAuthView(ProviderAuthView):
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
+        
         if response.status_code == 200:
             access_token = response.data.get('access')
             refresh_token = response.data.get('refresh')
@@ -54,7 +55,13 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 
             if refresh_token:
                 set_auth_cookie(response, 'refresh', refresh_token, settings.AUTH_COOKIE_REFRESH_MAX_AGE)
-                
+            
+            user_serializer = CustomUserSerializer(
+                User.objects.get(email=request.data.get('email')),
+                context = {'request': request}
+            )
+            
+            response.data['user'] = user_serializer.data
         return response
 
 class CustomTokenRefreshView(TokenRefreshView):
@@ -69,8 +76,7 @@ class CustomTokenRefreshView(TokenRefreshView):
         
         if response.status_code == 200:
             access_token = response.data.get('access')
-            print("Access token:", access_token)
-            
+    
             #on met a jour le access token
             if access_token:
                 set_auth_cookie(response, 'access', access_token, settings.AUTH_COOKIE_ACCESS_MAX_AGE)
