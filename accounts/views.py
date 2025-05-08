@@ -64,25 +64,27 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             response.data['user'] = user_serializer.data
         return response
 
+
 class CustomTokenRefreshView(TokenRefreshView):
-    def post(self, request, *args, **kwargs) :
+    def post(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get('refresh')
         
         if refresh_token:
-            #si le token refresh dans le la list des cookies
-            request.data['refresh'] = refresh_token
+            mutable_data = request.data.copy()
+            mutable_data['refresh'] = refresh_token
+            request._full_data = mutable_data
             
-        response =  super().post(request, *args, **kwargs)
+            
+        response = super().post(request, *args, **kwargs)
         
         if response.status_code == 200:
             access_token = response.data.get('access')
-    
-            #on met a jour le access token
+            
+            # Update the access token
             if access_token:
                 set_auth_cookie(response, 'access', access_token, settings.AUTH_COOKIE_ACCESS_MAX_AGE)
-     
+                
         return response
-    
 
 class CustomTokenVerifyView(TokenVerifyView):
     def post(self, request, *args, **kwargs):
