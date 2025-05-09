@@ -14,8 +14,8 @@ from rest_framework import generics, status, viewsets
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.decorators import api_view, action, permission_classes
 from djoser.social.views import ProviderAuthView
-from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
-from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 from .permissions import IsAdminOrFarmer
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -88,27 +88,36 @@ class CustomTokenRefreshView(TokenRefreshView):
 
 class CustomTokenVerifyView(TokenVerifyView):
     def post(self, request, *args, **kwargs):
-        access_token = request.COOKIES.get('access')
-        
-        if access_token:
-            request = Request(request._request, data={'token': access_token})
+        if not request.data.get('token') and request.COOKIES.get('access'):
+            data = request.data.copy()
+            
+            data['token'] = request.COOKIES.get('access')
+            request.data = data
             
         return super().post(request, *args, **kwargs)
     
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def LogoutView(request):
-    if request.method == 'POST':
-        # Supprimer les tokens en mettant leur valeur des cookies à ''
-        response = Response(status=status.HTTP_204_NO_CONTENT)
-                   
-        # Suppressions des cookies
-        set_auth_cookie(response, 'access', '', max_age=0)
-        set_auth_cookie(response, 'refresh', '', max_age=0)
+    try:
+        refresh_token = request.COOKIES.get('refresh')
+        response = Response({"detail": "Déconnexion réussie."}, status=status.HTTP_205_RESET_CONTENT)
         
+        if refresh_token:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            
+            # Supprime les cookies
+            set_auth_cookie(response, 'access', '', max_age=0)
+            set_auth_cookie(response, 'refresh', '', max_age=0)
+            
         return response
-    
-    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+            
+    except TokenError as e:
+        return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"detail": "Une erreur s'est produite lors de la déconnexion"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class CustomUserViewSet(UserViewSet):
     def handle_user_role(self, user):
